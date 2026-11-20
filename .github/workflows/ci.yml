@@ -36,7 +36,7 @@ jobs:
            python-version: '3.11'
       - name: Instalar dependências e Linter
         run: |
-           pip install -r src/api/requirements.txt
+           pip install pydantic
            pip install pytest
            pip install requests
            pip install flake8
