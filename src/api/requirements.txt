@@ -1,0 +1,4 @@
+pika
+Pillow
+uvicorn
+fastapi
