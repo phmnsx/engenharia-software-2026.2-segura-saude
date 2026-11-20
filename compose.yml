@@ -1,0 +1,16 @@
+services:
+  nginx-test:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.test.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      gateway-1:
+        condition: service_healthy 
+      gateway-2:
+        condition: service_healthy
+      gateway-3:
+        condition: service_healthy
+    networks:
+      - test-net
