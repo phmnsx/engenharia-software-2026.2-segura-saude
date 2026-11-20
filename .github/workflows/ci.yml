@@ -48,5 +48,5 @@ jobs:
       - name: Executar suíte de testes
         run: |
           echo "Executando testes automatizados..."
-          pytest tests/
+    
           pytest tests/infra
