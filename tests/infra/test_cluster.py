@@ -1,10 +1,11 @@
+from pathlib import Path
 import subprocess
 import time
 import requests
 import pytest
 import json
 
-COMPOSE_FILE = "compose.test.yml"
+COMPOSE_FILE = Path(__file__).parent.resolve() / "compose.test.yml"
 URL_TEST = "http://localhost:8080"
 
 def setup_module(module):
