@@ -67,6 +67,51 @@ services:
         <<: *gateway
         container_name: gateway-3
         hostname: gateway-3
+        
+    log-db:
+        image: postgres:16-alpine
+        container_name: log-db
+        environment:
+            POSTGRES_DB: segurasaude_logs
+            POSTGRES_USER: log_admin
+            POSTGRES_PASSWORD: ${LOG_DB_ADMIN_PASSWORD:-dev_admin_pass}
+        volumes:
+            - log_db_data:/var/lib/postgresql/data
+            - ./infra/log_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U log_admin -d segurasaude_logs"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        networks:
+            - log_db_net
+
+    log-service:
+        build: ./src/log_service
+        container_name: log-service
+        environment:
+            LOG_DATABASE_URL: postgresql://log_writer:log_writer_dev_pass@log-db:5432/segurasaude_logs
+        depends_on:
+            log-db:
+                condition: service_healthy
+        expose:
+            - "8000"
+        ports:
+            - "127.0.0.1:8005:8000"
+        healthcheck:
+            test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+            start_period: 5s
+        networks:
+            - mainServer
+            - log_db_net
 networks:
   mainServer:
+  log_db_net:
+    internal: true
+
+volumes:
+  log_db_data:
         
