@@ -1,16 +1,26 @@
 
 
 
+
 x-rabbit-env: &r-env #Variaveis relacionadas a rabbitmq
     RABBITMQ_HOST: placeholder
 
 #Definição de um gateway
 x-gateway : &gateway
-    build: ./src/api
+    build:
+        context: ./src
+        dockerfile: api/Dockerfile
     environment:
         <<: *r-env
+        DATABASE_URL: postgresql://app_user:app_user_dev_pass@metadados-db:5432/segurasaude
+        LOG_SERVICE_URL: http://log-service:8000
     expose:
     - "8082"
+    depends_on:
+        metadados-db:
+            condition: service_healthy
+        log-service:
+            condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/')"]
       interval: 5s
@@ -57,6 +67,8 @@ services:
         <<: *gateway
         container_name: gateway-1
         hostname: gateway-1
+        ports:
+            - "127.0.0.1:8082:8082"
 
     gateway-2:
         <<: *gateway
@@ -67,6 +79,25 @@ services:
         <<: *gateway
         container_name: gateway-3
         hostname: gateway-3
+
+    metadados-db:
+        image: postgres:16-alpine
+        container_name: metadados-db
+        environment:
+            POSTGRES_DB: segurasaude
+            POSTGRES_USER: app_admin
+            POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:-dev_admin_pass}
+        volumes:
+            - metadados_db_data:/var/lib/postgresql/data
+            - ./infra/metadados_db/init.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+            - ./infra/metadados_db/init_user.sql:/docker-entrypoint-initdb.d/02-user.sql:ro
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U app_admin -d segurasaude"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        networks:
+            - mainServer
         
     log-db:
         image: postgres:16-alpine
@@ -114,4 +145,4 @@ networks:
 
 volumes:
   log_db_data:
-        
+  metadados_db_data:

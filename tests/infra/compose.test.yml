@@ -1,6 +1,7 @@
 x-gateway: &gateway
   build: 
-    context: ../../src/api
+    context: ../../src
+    dockerfile: api/Dockerfile
   expose:
     - "8082"
   networks:

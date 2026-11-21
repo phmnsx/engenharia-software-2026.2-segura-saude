@@ -22,6 +22,17 @@ def send_audit_log(actor_id: str, actor_role: str, action: str, resource: str, s
     return _post_or_buffer("/logs/audit", payload)
 
 
+def send_system_log(service_name: str, level: str, message: str, context: dict | None = None) -> bool:
+    payload = {
+        "event_id": str(uuid4()),
+        "service_name": service_name,
+        "level": level,
+        "message": message,
+        "context": context or {},
+    }
+    return _post_or_buffer("/logs/system", payload)
+
+
 def _post_or_buffer(endpoint: str, payload: dict) -> bool:
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
