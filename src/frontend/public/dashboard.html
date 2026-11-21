@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · SeguraSaúde</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="layout">
+  <main class="conteudo" id="conteudo">
+    <h1>Dashboard</h1>
+    <p class="subtitulo">Lotes de metadados e matriz de risco</p>
+    <div id="alerta"></div>
+    <section class="kpis" aria-label="Indicadores">
+      <div class="kpi"><div class="valor" id="kpi-lotes">—</div><div class="rotulo">Lotes cadastrados</div></div>
+      <div class="kpi"><div class="valor" id="kpi-metadados">—</div><div class="rotulo">Metadados nos lotes listados</div></div>
+      <div class="kpi"><div class="valor" id="kpi-ultimo">—</div><div class="rotulo">Último lote</div></div>
+    </section>
+    <section class="card" aria-labelledby="t-matriz">
+      <h2 id="t-matriz">Matriz de risco (lotes mais recentes)</h2>
+      <div id="matriz"></div>
+    </section>
+    <section class="card" aria-labelledby="t-lotes">
+      <h2 id="t-lotes">Lotes</h2>
+      <div class="tabela-wrap" id="lotes"></div>
+    </section>
+  </main>
+</div>
+<script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

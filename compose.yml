@@ -52,6 +52,8 @@ services:
         ports:
         - "8080:80"
         depends_on:
+            frontend:
+                condition: service_healthy
             gateway-1:
                 condition: service_healthy 
             gateway-2:
@@ -63,6 +65,20 @@ services:
         networks:
         - mainServer
     
+    frontend:
+        build: ./src/frontend
+        container_name: frontend
+        expose:
+        - "80"
+        healthcheck:
+            test: ["CMD", "wget", "-qO-", "http://127.0.0.1/index.html"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+            start_period: 3s
+        networks:
+        - mainServer
+
     gateway-1:
         <<: *gateway
         container_name: gateway-1

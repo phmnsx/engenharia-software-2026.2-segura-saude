@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Formulário · SeguraSaúde</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="layout">
+  <main class="conteudo" id="conteudo">
+    <h1>Cadastro de lote por formulário</h1>
+    <p class="subtitulo">A base legal é obrigatória (RN01 · LGPD).</p>
+    <div id="alerta"></div>
+    <form class="card" id="form-lote" novalidate>
+      <label for="nome_lote">Nome do lote *</label>
+      <input type="text" id="nome_lote" name="nome_lote" maxlength="200" required>
+      <label for="base_legal">Base legal (LGPD) *</label>
+      <input type="text" id="base_legal" name="base_legal" maxlength="200" placeholder="Ex.: Art. 7º, II — obrigação legal" required>
+      <h2 style="margin-top:22px">Metadados</h2>
+      <div id="itens"></div>
+      <div class="linha-acoes">
+        <button type="button" class="btn secundario" id="add-item">+ Adicionar metadado</button>
+        <button type="submit" class="btn" id="enviar">Salvar lote</button>
+      </div>
+    </form>
+  </main>
+</div>
+<script type="module" src="js/formulario.js"></script>
+</body>
+</html>

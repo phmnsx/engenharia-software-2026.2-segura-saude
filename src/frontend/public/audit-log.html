@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Audit Log · SeguraSaúde</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="layout">
+  <main class="conteudo" id="conteudo">
+    <h1>Audit Log</h1>
+    <p class="subtitulo">Somente leitura. Registros são append-only e não podem ser alterados nem excluídos (RNF001).</p>
+    <div id="alerta"></div>
+    <section class="card"><div class="tabela-wrap" id="logs"></div></section>
+  </main>
+</div>
+<script type="module" src="js/audit.js"></script>
+</body>
+</html>
