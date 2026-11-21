@@ -1,8 +1,18 @@
 from fastapi import FastAPI
 import socket
 
-app = FastAPI()
+from api.controlador_metadados import router as metadados_router
+
+app = FastAPI(title="SeguraSaúde - API Gateway")
+
+app.include_router(metadados_router)
+
 
 @app.get("/")
 def read_root():
     return {"container_id": socket.gethostname()}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
