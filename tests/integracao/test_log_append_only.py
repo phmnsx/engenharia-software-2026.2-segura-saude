@@ -1,8 +1,17 @@
 import os
 import subprocess
+import pytest
 import requests
 
 LOG_API_URL = os.getenv("LOG_API_URL", "http://localhost:8005")
+
+
+@pytest.fixture(scope="module", autouse=True)
+def ensure_log_services_running():
+    subprocess.run(
+        ["docker", "compose", "up", "-d", "--wait", "log-db", "log-service"],
+        check=True,
+    )
 
 
 def test_create_and_read_audit_log():
@@ -30,15 +39,29 @@ def test_api_rejects_update_and_delete():
 
 
 def test_direct_db_rejects_update_and_delete():
+    resp = requests.post(
+        f"{LOG_API_URL}/logs/audit",
+        json={
+            "actor_id": "tester_cq01",
+            "actor_role": "ANALISTA",
+            "action": "TESTE_IMUTABILIDADE",
+            "resource": "audit_logs",
+            "status": "SUCCESS",
+        },
+        timeout=5,
+    )
+    assert resp.status_code == 201
+    log_id = resp.json()["id"]
+
     update_cmd = [
         "docker", "compose", "exec", "-T", "log-db",
         "psql", "-U", "log_admin", "-d", "segurasaude_logs",
-        "-c", "UPDATE audit_logs SET action = 'FRAUDE' WHERE id = 1;",
+        "-c", f"UPDATE audit_logs SET action = 'FRAUDE' WHERE id = {log_id};",
     ]
     delete_cmd = [
         "docker", "compose", "exec", "-T", "log-db",
         "psql", "-U", "log_admin", "-d", "segurasaude_logs",
-        "-c", "DELETE FROM audit_logs WHERE id = 1;",
+        "-c", f"DELETE FROM audit_logs WHERE id = {log_id};",
     ]
 
     res_update = subprocess.run(update_cmd, capture_output=True, text=True)
