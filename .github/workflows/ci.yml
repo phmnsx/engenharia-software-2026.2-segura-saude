@@ -48,4 +48,3 @@ jobs:
         run: |
           echo "Executando testes automatizados..."
           pytest tests/
-          pytest tests/infra

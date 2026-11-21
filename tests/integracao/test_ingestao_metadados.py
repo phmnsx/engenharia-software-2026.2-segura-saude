@@ -38,6 +38,14 @@ def ensure_services_running():
             pass
         time.sleep(2)
 
+    yield
+
+    # Derruba os containers para não colidir com outros testes (ex: test_cluster)
+    subprocess.run(
+        ["docker", "compose", "down", "-v", "--remove-orphans"],
+        check=False,
+    )
+
 
 # ── RN01: Rejeitar lote sem base_legal (HTTP 400) ──────────────────────
 class TestRN01RejeicaoSemBaseLegal:

@@ -12,6 +12,11 @@ def ensure_log_services_running():
         ["docker", "compose", "up", "-d", "--wait", "log-db", "log-service"],
         check=True,
     )
+    yield
+    subprocess.run(
+        ["docker", "compose", "down", "-v", "--remove-orphans"],
+        check=False,
+    )
 
 
 def test_create_and_read_audit_log():
