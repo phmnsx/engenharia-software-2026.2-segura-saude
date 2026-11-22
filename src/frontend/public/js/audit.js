@@ -2,14 +2,14 @@ import { PERFIS, exigirPerfil } from "./auth.js";
 import { listarAuditLogs, listarLogsSistema, registrarAuditLog, ApiError } from "./api.js";
 import { el, limpar, mostrarAlerta, formatarData, montarSidebar } from "./ui.js";
 
-const s = exigirPerfil([PERFIS.ANALISTA, PERFIS.DESENVOLVEDOR]);
+// UC Visualizar Logs / Criar Audit Log: tela exclusiva do Desenvolvedor (RN06).
+const s = exigirPerfil([PERFIS.DESENVOLVEDOR]);
 if (s) iniciar(s);
 
 function iniciar(sessao) {
   montarSidebar("audit", sessao);
   const alerta = document.getElementById("alerta");
-  // RN06: apenas o desenvolvedor registra log de auditoria.
-  if (sessao.perfil === PERFIS.DESENVOLVEDOR) prepararRegistro(sessao, alerta);
+  prepararRegistro(sessao, alerta);
   carregarLogs(alerta);
 }
 
@@ -47,7 +47,6 @@ async function carregarLogs(alerta) {
 }
 
 function prepararRegistro(sessao, alerta) {
-  document.getElementById("registro").classList.remove("oculto");
   const form = document.getElementById("form-audit");
   const responsavel = document.getElementById("responsavel");
   const botao = document.getElementById("registrar");
