@@ -69,7 +69,7 @@ class TestMatrizRiscoEndpoints:
         assert "Lote não encontrado" in resp.json()["detail"]
 
     def test_obter_matriz_antes_de_calcular_retorna_404(self):
-        """Lote criado mas ainda sem cálculo deve retornar 404 ao consultar matriz."""
+        """Lote criado sem metadados (metadados: []) não gera matriz na ingestão e deve retornar 404 ao consultar matriz."""
         lote_resp = requests.post(
             f"{API_URL}/metadados/lotes",
             json={
@@ -85,6 +85,36 @@ class TestMatrizRiscoEndpoints:
         resp = requests.get(f"{API_URL}/matriz/lotes/{lote_id}", timeout=5)
         assert resp.status_code == 404
         assert "ainda não calculada" in resp.json()["detail"]
+
+    def test_matriz_calculada_automaticamente_na_ingestao(self):
+        """Ao criar um lote com metadados (total > 0), a matriz deve ser calculada e disponibilizada em GET sem chamar /calcular."""
+        payload = {
+            "nome_lote": "Lote Calculo Automatico Ingestao",
+            "base_legal": "Execucao de Contrato",
+            "analista_responsavel": "analista_auto",
+            "metadados": [
+                {
+                    "origem": "tabela_contratos",
+                    "temporalidade": "5 anos",
+                    "crm_responsavel": "CRM-SE-11223",
+                    "tipo_dado": "Nome",
+                    "categoria": "Identificador",
+                    "base_legal": "Execucao de Contrato",
+                    "criptografado": True,
+                    "atores_com_acesso": ["administrador"],
+                }
+            ],
+        }
+        lote_resp = requests.post(f"{API_URL}/metadados/lotes", json=payload, timeout=5)
+        assert lote_resp.status_code == 201
+        lote_id = lote_resp.json()["id"]
+
+        # GET direto na matriz do lote sem ter acionado POST /matriz/lotes/{id}/calcular
+        resp = requests.get(f"{API_URL}/matriz/lotes/{lote_id}", timeout=5)
+        assert resp.status_code == 200
+        matriz = resp.json()
+        assert matriz["id_lote"] == lote_id
+        assert matriz["nivel_risco"] == 0
 
     def test_calcular_e_obter_matriz_risco_critico(self):
         """
