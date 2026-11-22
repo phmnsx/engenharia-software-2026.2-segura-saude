@@ -3,10 +3,12 @@ import socket
 from api.auth_routes import router as auth_router
 
 from api.controlador_metadados import router as metadados_router
+from api.controlador_matriz import router as matriz_router
 
 app = FastAPI(title="SeguraSaúde - API Gateway")
 
 app.include_router(metadados_router)
+app.include_router(matriz_router)
 app.include_router(auth_router)
 
 @app.get("/")
