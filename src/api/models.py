@@ -39,3 +39,4 @@ class MatrizDeRisco(BaseModel):
     nivel_risco: NivelRisco
     data_hora: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     recomendacao_acao: str
+    detalhes: Optional[List[dict]] = None

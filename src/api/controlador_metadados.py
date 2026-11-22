@@ -6,6 +6,7 @@ da LGPD (RN01) e dispara registro automático no Serviço de Log (LogSistema).
 """
 
 import json
+import logging
 from uuid import uuid4
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile, File, Query
@@ -18,7 +19,10 @@ from api.schemas import (
     LoteMetadadosSummaryOut,
     MetadadosOut,
 )
+from api.servico_matriz import calcular_e_salvar
 from common.log_client import send_system_log
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/metadados", tags=["Metadados"])
 
@@ -154,5 +158,21 @@ def _persistir_lote(payload: LoteMetadadosIn) -> dict:
             "total_metadados": total,
         },
     )
+
+    # Cálculo automático da matriz na ingestão (se total > 0)
+    if total > 0:
+        try:
+            calcular_e_salvar(lote_id)
+        except Exception as exc:
+            logger.error("Falha ao calcular matriz para o lote %s: %s", lote_id, exc, exc_info=True)
+            send_system_log(
+                service_name="api-gateway",
+                level="ERROR",
+                message=f"Falha ao calcular matriz automaticamente para o lote '{payload.nome_lote}': {exc}",
+                context={
+                    "lote_id": lote_id,
+                    "erro": str(exc),
+                },
+            )
 
     return lote_row

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Literal, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 
 class MetadadosIn(BaseModel):
@@ -55,6 +55,25 @@ class LoteMetadadosSummaryOut(BaseModel):
     analista_responsavel: Optional[str] = None
     data_criacao: datetime
     total_metadados: int
+
+
+class DetalheItemRiscoOut(BaseModel):
+    id_metadado: Optional[str] = None
+    origem: str
+    sensibilidade: str
+    criptografado: bool
+    atores_com_acesso: List[str] = Field(default_factory=list)
+    nivel_risco: int
+    fatores: List[str] = Field(default_factory=list)
+
+
+class MatrizDeRiscoOut(BaseModel):
+    id: UUID
+    id_lote: UUID
+    nivel_risco: int
+    recomendacao_acao: str
+    data_hora: datetime
+    detalhes: List[DetalheItemRiscoOut] = Field(default_factory=list)
 
 
 class AuditLogManualIn(BaseModel):
