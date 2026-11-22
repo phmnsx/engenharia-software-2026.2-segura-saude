@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · SeguraSaúde</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="login-wrap">
+  <form class="login-card" id="form-login" novalidate>
+    <h1>SeguraSaúde</h1>
+    <p class="subtitulo" style="text-align:center">Matriz de risco de privacidade (LGPD)</p>
+    <div id="alerta"></div>
+    <div class="alerta aviso">Modo demonstração: o serviço de autenticação (RF003) ainda não foi implementado. O perfil escolhido apenas ajusta o menu; a autorização real será feita no gateway.</div>
+    <label for="nome">Nome</label>
+    <input type="text" id="nome" name="nome" autocomplete="username" required>
+    <label for="perfil">Perfil</label>
+    <select id="perfil" name="perfil" required>
+      <option value="ANALISTA">Analista de Sistemas</option>
+      <option value="DESENVOLVEDOR">Desenvolvedor</option>
+    </select>
+    <div class="linha-acoes"><button class="btn" type="submit">Entrar</button></div>
+  </form>
+</div>
+<script type="module" src="js/login.js"></script>
+</body>
+</html>
