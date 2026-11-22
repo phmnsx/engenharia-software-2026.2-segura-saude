@@ -20,11 +20,15 @@ Consolida o nível de risco do lote (pior caso / elo mais fraco) e gera a
 ação recomendada correspondente (Criptografar, Remover acesso, Manter log).
 """
 
+from functools import lru_cache
+import re
 from typing import Any, Dict, List, Tuple
+import unicodedata
 from api.models import NivelRisco
 
 # Termos associados a dados sensíveis de saúde (LGPD Art. 5º, II e Art. 11)
-TERMOS_SENSIVEIS_SAUDE = {
+# Nota: "tratamento" foi removido por ser ambíguo (ex.: tratamento de dados, tratamento de resíduos).
+TERMOS_SENSIVEIS_SAUDE = frozenset({
     "cid",
     "diagnostico",
     "diagnóstico",
@@ -45,11 +49,10 @@ TERMOS_SENSIVEIS_SAUDE = {
     "doenca",
     "doença",
     "cirurgia",
-    "tratamento",
-}
+})
 
 # Termos associados a dados pessoais comuns identificáveis (PII - LGPD Art. 5º, I)
-TERMOS_PII = {
+TERMOS_PII = frozenset({
     "cpf",
     "rg",
     "nome",
@@ -65,10 +68,10 @@ TERMOS_PII = {
     "cns",
     "cartao_sus",
     "cartão_sus",
-}
+})
 
 # Perfis de atores considerados não clínicos ou com necessidade de restrição estrita
-ATORES_NAO_CLINICOS = {
+ATORES_NAO_CLINICOS = frozenset({
     "terceiro",
     "terceiros",
     "marketing",
@@ -80,7 +83,24 @@ ATORES_NAO_CLINICOS = {
     "financeiro",
     "publico",
     "público",
-}
+})
+
+
+def _sem_acento(s: str) -> str:
+    """Remove acentos e caracteres diacríticos da string."""
+    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+
+
+@lru_cache(maxsize=None)
+def _regex(termos: frozenset) -> re.Pattern:
+    """Compila expressão regular que casa palavras inteiras (usando bordas \\b)."""
+    alternativas = "|".join(re.escape(_sem_acento(t)) for t in sorted(termos, key=len, reverse=True))
+    return re.compile(rf"\b(?:{alternativas})\b")
+
+
+def _contem(texto: str, termos: frozenset) -> bool:
+    """Verifica se o texto contém algum dos termos como palavra inteira (case/acento-insensível)."""
+    return bool(_regex(termos).search(_sem_acento(texto.lower())))
 
 
 def _extrair_texto_normalizado(*valores: Any) -> str:
@@ -102,18 +122,16 @@ def classificar_sensibilidade(origem: str = "", tipo_dado: str = "", categoria: 
     texto = _extrair_texto_normalizado(origem, tipo_dado, categoria)
 
     # 1. Verifica termos sensíveis de saúde (Art. 11 LGPD)
-    for termo in TERMOS_SENSIVEIS_SAUDE:
-        if termo in texto:
-            return 3, "SENSÍVEL_SAÚDE"
+    if _contem(texto, TERMOS_SENSIVEIS_SAUDE):
+        return 3, "SENSÍVEL_SAÚDE"
 
     # Se a categoria declarada contiver explicitamente 'sensivel'
-    if "sensivel" in texto or "sensível" in texto:
+    if _contem(texto, frozenset({"sensivel", "sensível"})):
         return 3, "SENSÍVEL_SAÚDE"
 
     # 2. Verifica dados pessoais comuns / identificadores (Art. 5º, I LGPD)
-    for termo in TERMOS_PII:
-        if termo in texto:
-            return 2, "PII_IDENTIFICADOR"
+    if _contem(texto, TERMOS_PII):
+        return 2, "PII_IDENTIFICADOR"
 
     # 3. Dado técnico ou geral
     return 1, "GERAL_TECNICO"
@@ -136,8 +154,9 @@ def avaliar_exposicao_atores(atores: List[str], peso_sensibilidade: int) -> Tupl
 
     # Presença de atores não-clínicos com acesso a dados PII ou sensíveis
     if peso_sensibilidade >= 2:
-        atores_normalizados = [str(a).strip().lower() for a in atores]
-        nao_clinicos_presentes = [a for a in atores_normalizados if any(nc in a for nc in ATORES_NAO_CLINICOS)]
+        nao_clinicos_presentes = [
+            str(a).strip() for a in atores if _contem(str(a), ATORES_NAO_CLINICOS)
+        ]
         if nao_clinicos_presentes:
             fatores.append(
                 f"Atores não-clínicos/externos com acesso a dados pessoais ou sensíveis: {', '.join(nao_clinicos_presentes)}"
@@ -229,7 +248,7 @@ def gerar_recomendacao_acao(nivel_geral: int, detalhes: List[Dict[str, Any]]) ->
     )
     possui_exposicao_atores = any(
         len(d["atores_com_acesso"]) > 3 or any(
-            any(nc in str(a).lower() for nc in ATORES_NAO_CLINICOS)
+            _contem(str(a), ATORES_NAO_CLINICOS)
             for a in d["atores_com_acesso"]
         )
         for d in detalhes
