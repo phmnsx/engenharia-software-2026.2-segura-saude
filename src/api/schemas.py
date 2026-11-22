@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 from uuid import UUID
 
 
@@ -74,3 +74,24 @@ class MatrizDeRiscoOut(BaseModel):
     recomendacao_acao: str
     data_hora: datetime
     detalhes: List[DetalheItemRiscoOut] = Field(default_factory=list)
+
+
+class AuditLogManualIn(BaseModel):
+    """Registro manual de AuditLog pela tela de logs (RF005, RN06).
+
+    O motivo é obrigatório. Espaços nas pontas são removidos antes da
+    validação, então um motivo só com espaços é rejeitado (HTTP 422).
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    actor_id: str = Field(..., min_length=1, max_length=100)
+    actor_role: Literal["ANALISTA", "DESENVOLVEDOR"]
+    action: str = Field(..., min_length=1, max_length=100)
+    resource: str = Field(..., min_length=1, max_length=150)
+    motivo: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="Motivo da auditoria. Campo obrigatório (RF005).",
+    )

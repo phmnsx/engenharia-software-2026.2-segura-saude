@@ -90,3 +90,17 @@ def test_csv_modelo_de_colunas_coerente_com_api():
     csv_js = (PUBLIC / "js" / "csv.js").read_text(encoding="utf-8")
     for col in ("origem", "temporalidade", "crm_responsavel", "tipo_dado", "categoria", "base_legal", "criptografado", "atores_com_acesso"):
         assert col in schemas and col in csv_js, col
+
+
+def test_registro_audit_log_exige_motivo_e_e_do_desenvolvedor():
+    ids = {a.get("id"): a for _, a in carregar("audit-log") if a.get("id")}
+    assert "required" in ids["motivo"], "motivo deve ser obrigatorio (RF005)"
+    assert "readonly" in ids["responsavel"]
+    js = (PUBLIC / "js" / "audit.js").read_text(encoding="utf-8")
+    assert "exigirPerfil([PERFIS.DESENVOLVEDOR])" in js and "RF005" in js, "tela so do desenvolvedor (RN06)"
+    menu = (PUBLIC / "js" / "ui.js").read_text(encoding="utf-8")
+    linha = next(l for l in menu.splitlines() if 'chave: "audit"' in l)
+    assert "ANALISTA" not in linha, "menu Audit Log nao pode aparecer ao analista"
+    api = (PUBLIC / "js" / "api.js").read_text(encoding="utf-8")
+    assert re.search(r'request\("/logs/audit",\s*\{\s*method:\s*"POST"', api)
+    assert "/logs/system" in api

@@ -10,9 +10,38 @@
 <div class="layout">
   <main class="conteudo" id="conteudo">
     <h1>Audit Log</h1>
-    <p class="subtitulo">Somente leitura. Registros são append-only e não podem ser alterados nem excluídos (RNF001).</p>
+    <p class="subtitulo">Registros append-only: não podem ser alterados nem excluídos (RNF001). Tela exclusiva do perfil Desenvolvedor (RN06).</p>
     <div id="alerta"></div>
-    <section class="card"><div class="tabela-wrap" id="logs"></div></section>
+    <section class="card" id="registro" aria-labelledby="t-registro">
+      <h2 id="t-registro">Novo log de auditoria</h2>
+      <form id="form-audit" novalidate>
+        <label for="responsavel">Responsável</label>
+        <input type="text" id="responsavel" readonly>
+        <label for="acao">Ação *</label>
+        <select id="acao" required>
+          <option value="">Selecione a ação</option>
+          <option value="EXTRAIR_METADADOS">Extrair metadados</option>
+          <option value="LOGIN">Login</option>
+          <option value="VISUALIZAR_MATRIZ">Visualizar matriz</option>
+          <option value="CADASTRAR_METADADOS">Cadastrar metadados</option>
+          <option value="UPLOAD_ARQUIVO">Upload de arquivo</option>
+        </select>
+        <label for="recurso">Recurso auditado *</label>
+        <input type="text" id="recurso" maxlength="150" placeholder="Ex.: lote Prontuário 2026" required>
+        <label for="motivo">Motivo da auditoria *</label>
+        <textarea id="motivo" maxlength="500" rows="3" placeholder="Descreva o motivo (ex.: auditoria LGPD)" required></textarea>
+        <p class="dica">Após registrado, o log não poderá ser alterado.</p>
+        <div class="linha-acoes"><button class="btn" type="submit" id="registrar">Registrar log</button></div>
+      </form>
+    </section>
+    <section class="card" aria-labelledby="t-audit">
+      <h2 id="t-audit">Registros de auditoria</h2>
+      <div class="tabela-wrap" id="logs"></div>
+    </section>
+    <section class="card" aria-labelledby="t-sistema">
+      <h2 id="t-sistema">Logs do sistema</h2>
+      <div class="tabela-wrap" id="logs-sistema"></div>
+    </section>
   </main>
 </div>
 <script type="module" src="js/audit.js"></script>

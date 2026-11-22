@@ -52,7 +52,7 @@ const MENU = [
   { chave: "dashboard", href: "dashboard.html", rotulo: "Dashboard", perfis: [PERFIS.ANALISTA, PERFIS.DESENVOLVEDOR] },
   { chave: "formulario", href: "formulario.html", rotulo: "Formulário", perfis: [PERFIS.ANALISTA] },
   { chave: "upload", href: "upload.html", rotulo: "Upload JSON/CSV", perfis: [PERFIS.ANALISTA] },
-  { chave: "audit", href: "audit-log.html", rotulo: "Audit Log", perfis: [PERFIS.ANALISTA, PERFIS.DESENVOLVEDOR] },
+  { chave: "audit", href: "audit-log.html", rotulo: "Audit Log", perfis: [PERFIS.DESENVOLVEDOR] },
 ];
 
 export function montarSidebar(ativo, sessao) {
