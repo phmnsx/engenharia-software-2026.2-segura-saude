@@ -55,3 +55,10 @@ export async function obterMatriz(idLote) {
 }
 
 export const listarAuditLogs = (limit = 100) => request(`/logs/audit?limit=${limit}`);
+export const listarLogsSistema = (limit = 100) => request(`/logs/system?limit=${limit}`);
+export const registrarAuditLog = (payload) =>
+  request("/logs/audit", {
+    method: "POST",
+    headers: JSON_HEADERS,
+    body: JSON.stringify(payload),
+  });
