@@ -1,5 +1,5 @@
 from unittest.mock import MagicMock, patch
-from api.schemas import LoteMetadadosIn, MetadadosItemIn
+from api.schemas import LoteMetadadosIn, MetadadosIn
 from api.controlador_metadados import _persistir_lote
 
 
@@ -8,7 +8,7 @@ def test_persistir_lote_com_metadados_chama_calculo_e_trata_erro():
         nome_lote="Lote Teste",
         base_legal="Consentimento",
         metadados=[
-            MetadadosItemIn(
+            MetadadosIn(
                 origem="tabela_x",
                 temporalidade="5 anos",
                 crm_responsavel="CRM-123",

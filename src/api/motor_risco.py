@@ -86,21 +86,22 @@ ATORES_NAO_CLINICOS = frozenset({
 })
 
 
-def _sem_acento(s: str) -> str:
-    """Remove acentos e caracteres diacríticos da string."""
-    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+def _normalizar_para_busca(s: str) -> str:
+    """Remove acentos e substitui separadores comuns (como _, -, .) por espaços."""
+    sem_acento = "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+    return re.sub(r"[_\-./]+", " ", sem_acento.lower())
 
 
 @lru_cache(maxsize=None)
 def _regex(termos: frozenset) -> re.Pattern:
     """Compila expressão regular que casa palavras inteiras (usando bordas \\b)."""
-    alternativas = "|".join(re.escape(_sem_acento(t)) for t in sorted(termos, key=len, reverse=True))
+    alternativas = "|".join(re.escape(_normalizar_para_busca(t)) for t in sorted(termos, key=len, reverse=True))
     return re.compile(rf"\b(?:{alternativas})\b")
 
 
 def _contem(texto: str, termos: frozenset) -> bool:
-    """Verifica se o texto contém algum dos termos como palavra inteira (case/acento-insensível)."""
-    return bool(_regex(termos).search(_sem_acento(texto.lower())))
+    """Verifica se o texto contém algum dos termos como palavra inteira (case/acento/separador-insensível)."""
+    return bool(_regex(termos).search(_normalizar_para_busca(texto)))
 
 
 def _extrair_texto_normalizado(*valores: Any) -> str:
