@@ -1,0 +1,52 @@
+x-gateway: &gateway
+  build: 
+    context: ../../src
+    dockerfile: api/Dockerfile
+  expose:
+    - "8082"
+  networks:
+    - test-net
+  environment:
+    - ENV=test
+  healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+services:
+  nginx-test:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.test.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      gateway-1:
+        condition: service_healthy 
+      gateway-2:
+        condition: service_healthy
+      gateway-3:
+        condition: service_healthy
+    networks:
+      - test-net
+
+  gateway-1:
+    <<: *gateway
+    container_name: gateway-1
+    hostname: gateway-1
+
+  gateway-2:
+    <<: *gateway
+    container_name: gateway-2
+    hostname: gateway-2
+    
+  gateway-3:
+    <<: *gateway
+    container_name: gateway-3
+    hostname: gateway-3
+
+networks:
+  test-net:
+    driver: bridge

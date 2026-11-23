@@ -1,0 +1,49 @@
+name: CI - SeguraSaúde (P3)
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  build-and-test:
+    name: Build, Lint e Testes Automatizados
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout/Setup (Seção 9 P3)
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      # 2. Build/Instalação - Valida se os Dockerfiles e o Compose sobem sem erros
+      - name: Validar configuração do Docker Compose
+        run: docker compose config
+
+      - name: Build das imagens Docker
+        run: docker compose build
+
+      # 3. Lint / Análise Estática 
+      # -----------------------------------------------------------------------
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+           python-version: '3.11'
+      - name: Instalar dependências e Linter
+        run: |
+           pip install -r src/api/requirements.txt
+           pip install pytest requests flake8
+      - name: Lint (Flake8)
+        run: flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      # 4. Testes Automatizados 
+      # -----------------------------------------------------------------------
+      - name: Executar suíte de testes
+        run: |
+          echo "Executando testes automatizados..."
+          pytest tests/

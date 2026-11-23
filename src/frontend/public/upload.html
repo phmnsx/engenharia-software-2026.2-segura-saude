@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upload · SeguraSaúde</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="layout">
+  <main class="conteudo" id="conteudo">
+    <h1>Upload de lote (JSON ou CSV)</h1>
+    <p class="subtitulo">Somente metadados sintéticos/anonimizados. Nunca envie dados pessoais reais.</p>
+    <div id="alerta"></div>
+    <form class="card" id="form-upload" novalidate>
+      <label for="nome_lote">Nome do lote *</label>
+      <input type="text" id="nome_lote" maxlength="200" required>
+      <label for="base_legal">Base legal (LGPD) *</label>
+      <input type="text" id="base_legal" maxlength="200" required>
+      <label for="arquivo">Arquivo .json ou .csv (até 10 MB) *</label>
+      <input type="file" id="arquivo" accept=".json,.csv" required>
+      <p class="dica">CSV: origem, temporalidade, crm_responsavel, tipo_dado, categoria, base_legal, criptografado, atores_com_acesso (separados por “;”).</p>
+      <div id="previa"></div>
+      <div class="linha-acoes"><button type="submit" class="btn" id="enviar" disabled>Enviar lote</button></div>
+    </form>
+  </main>
+</div>
+<script type="module" src="js/upload.js"></script>
+</body>
+</html>
