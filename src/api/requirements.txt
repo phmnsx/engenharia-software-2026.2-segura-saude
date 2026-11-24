@@ -1,4 +1,4 @@
-pika
+aio-pika
 Pillow
 uvicorn
 fastapi
