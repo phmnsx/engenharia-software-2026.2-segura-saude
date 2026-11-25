@@ -3,7 +3,11 @@
 
 
 x-rabbit-env: &r-env #Variaveis relacionadas a rabbitmq
-    RABBITMQ_HOST: placeholder
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: 5672
+  RABBITMQ_USER: guest
+  RABBITMQ_PASS: guest
+
 
 #Definição de um gateway
 x-gateway : &gateway
@@ -21,6 +25,8 @@ x-gateway : &gateway
             condition: service_healthy
         log-service:
             condition: service_healthy
+        rabbitmq:
+            condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/')"]
       interval: 5s
@@ -37,8 +43,8 @@ services:
         - "5672:5672"
         - "15672:15672"
         environment:
-            RABBITMQ_DEFAULT_USER: placeholder
-            RABBITMQ_DEFAULT_PASS: placeholder
+            RABBITMQ_DEFAULT_USER: guest
+            RABBITMQ_DEFAULT_PASS: guest
         healthcheck:
             test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
             interval: 10s

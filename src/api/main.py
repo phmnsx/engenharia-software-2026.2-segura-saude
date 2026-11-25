@@ -6,7 +6,10 @@ from api.auth_routes import router as auth_router
 from api.controlador_log import router as log_router
 from api.controlador_metadados import router as metadados_router
 from api.controlador_matriz import router as matriz_router
-from src.common.rabbitmqconfig import connection as conn
+from common.rabbitmqconfig.connection import RabbitMQConnection
+
+conn = RabbitMQConnection()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,7 +19,7 @@ async def lifespan(app: FastAPI):
 
     await conn.close()
 
-app = FastAPI(title="SeguraSaúde - API Gateway")
+app = FastAPI(title="SeguraSaúde - API Gateway", lifespan=lifespan)
 
 app.include_router(metadados_router)
 app.include_router(matriz_router)
