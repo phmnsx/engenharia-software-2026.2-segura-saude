@@ -39,9 +39,11 @@ x-gateway : &gateway
 services:
     rabbitmq:
         image: rabbitmq:4-management
-        ports:
-        - "5672:5672"
-        - "15672:15672"
+        # Acho que isso expoe a porta tambem fora de container, acredito que não seja necessario a nao ser que 
+        # a gente queira acessar o rabbitmq por fora.
+        #ports: 
+        #- "5672:5672"
+        #- "15672:15672"
         environment:
             RABBITMQ_DEFAULT_USER: guest
             RABBITMQ_DEFAULT_PASS: guest
@@ -50,6 +52,8 @@ services:
             interval: 10s
             timeout: 5s
             retries: 10
+        expose:
+        - "5672"
         networks:
         - mainServer
 
