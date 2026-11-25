@@ -10,16 +10,23 @@ URL_TEST = "http://localhost:8080"
 
 def setup_module(module):
     print("[SETUP] Inicializando 3 instancias para o cluster")
-    # Garante que containers anteriores ou órfãos sejam derrubados antes de subir
     subprocess.run(
         f"docker compose -f {COMPOSE_FILE} down -v --remove-orphans",
         shell=True, check=False
     )
-    subprocess.run(
-        f"docker compose -f {COMPOSE_FILE} up -d --build",
-        shell=True, check=True
-    )
-    time.sleep(5)  # Ter certeza que tudo iniciou
+    try:
+        subprocess.run(
+            f"docker compose -f {COMPOSE_FILE} up -d --build",
+            shell=True, check=True,
+            capture_output=True, text=True
+        )
+    except subprocess.CalledProcessError as e:
+        print("============== ERRO NO DOCKER COMPOSE ==============")
+        print(e.stderr)
+        print("============== LOGS DO GATEWAY-1 ==============")
+        logs = subprocess.run(f"docker compose -f {COMPOSE_FILE} logs gateway-1", shell=True, capture_output=True, text=True)
+        print(logs.stdout)
+        raise
 
 
 def teardown_module(module):

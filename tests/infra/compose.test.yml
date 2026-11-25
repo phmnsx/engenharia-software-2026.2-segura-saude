@@ -19,6 +19,22 @@ x-gateway: &gateway
       start_period: 5s
 
 services:
+  test-db:
+      image: postgres:16-alpine
+      environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DB: test_db
+      expose:
+        - "5432"
+      networks:
+        - test-net
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postgres"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+
   nginx-test:
     image: nginx:alpine
     ports:
