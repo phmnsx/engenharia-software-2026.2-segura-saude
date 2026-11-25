@@ -18,6 +18,10 @@ def _decode_jwt_payload(token: str) -> dict:
 @pytest.fixture(scope="module", autouse=True)
 def ensure_gateway_running():
     subprocess.run(
+        ["docker", "compose", "down", "-v", "--remove-orphans"],
+        check=False,
+    )
+    subprocess.run(
         ["docker", "compose", "up", "-d", "--wait", "gateway-1", "gateway-2", "gateway-3", "nginx"],
         check=True,
     )

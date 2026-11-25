@@ -3,7 +3,11 @@
 
 
 x-rabbit-env: &r-env #Variaveis relacionadas a rabbitmq
-    RABBITMQ_HOST: placeholder
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: 5672
+  RABBITMQ_USER: guest
+  RABBITMQ_PASS: guest
+
 
 #Definição de um gateway
 x-gateway : &gateway
@@ -21,6 +25,8 @@ x-gateway : &gateway
             condition: service_healthy
         log-service:
             condition: service_healthy
+        rabbitmq:
+            condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/')"]
       interval: 5s
@@ -33,17 +39,21 @@ x-gateway : &gateway
 services:
     rabbitmq:
         image: rabbitmq:4-management
-        ports:
-        - "5672:5672"
-        - "15672:15672"
+        # Acho que isso expoe a porta tambem fora de container, acredito que não seja necessario a nao ser que 
+        # a gente queira acessar o rabbitmq por fora.
+        #ports: 
+        #- "5672:5672"
+        #- "15672:15672"
         environment:
-            RABBITMQ_DEFAULT_USER: placeholder
-            RABBITMQ_DEFAULT_PASS: placeholder
+            RABBITMQ_DEFAULT_USER: guest
+            RABBITMQ_DEFAULT_PASS: guest
         healthcheck:
             test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
             interval: 10s
             timeout: 5s
             retries: 10
+        expose:
+        - "5672"
         networks:
         - mainServer
 
@@ -81,19 +91,16 @@ services:
 
     gateway-1:
         <<: *gateway
-        container_name: gateway-1
         hostname: gateway-1
         ports:
             - "127.0.0.1:8082:8082"
 
     gateway-2:
         <<: *gateway
-        container_name: gateway-2
         hostname: gateway-2
         
     gateway-3:
         <<: *gateway
-        container_name: gateway-3
         hostname: gateway-3
 
     metadados-db:

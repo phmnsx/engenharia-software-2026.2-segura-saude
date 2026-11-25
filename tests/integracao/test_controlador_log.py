@@ -27,6 +27,10 @@ AUDIT_VALIDO = {
 @pytest.fixture(scope="module", autouse=True)
 def ensure_services_running():
     subprocess.run(
+        ["docker", "compose", "down", "-v", "--remove-orphans"],
+        check=False,
+    )
+    subprocess.run(
         [
             "docker", "compose", "up", "-d", "--wait",
             "metadados-db", "log-db", "log-service", "gateway-1",

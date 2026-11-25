@@ -1,5 +1,5 @@
 import aio_pika, json, logging, uuid
-from connection import RabbitMQConnection
+from src.common.rabbitmqconfig.connection import RabbitMQConnection
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -21,15 +21,13 @@ class RabbitMQPublisher:
                 "timestamp" : datetime.now().isoformat(),
                 "data" : mensagem
             }
-
-            async with channel.transaction():
-                await channel.default_exchange.publish(
-                    aio_pika.Message(
-                        body=json.dumps(payload).encode(),
-                        delivery_mode=aio_pika.DeliveryMode.PERSISTENT
-                    ),
-                    routing_key=fila
-                )
+            await channel.default_exchange.publish(
+                aio_pika.Message(
+                    body=json.dumps(payload).encode(),
+                    delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+                ),
+                routing_key=fila
+            )
             logger.info(f"[RabbitMQ] Mensagem publicada na fila '{fila}' com sucesso.")
         except Exception as e:
             logger.error(f"[RabbitMQ] Falha ao publicar na fila '{fila}': {e}")
