@@ -8,6 +8,9 @@ x-gateway: &gateway
     - test-net
   environment:
     - ENV=test
+  depends_on:
+    rabbitmq:
+      condition: service_healthy
   healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/')"]
       interval: 5s
@@ -31,6 +34,22 @@ services:
         condition: service_healthy
     networks:
       - test-net
+
+  rabbitmq:
+        image: rabbitmq:4-management
+        ports:
+        - "5672:5672"
+        - "15672:15672"
+        environment:
+            RABBITMQ_DEFAULT_USER: guest
+            RABBITMQ_DEFAULT_PASS: guest
+        healthcheck:
+            test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+        networks:
+        - test-net
 
   gateway-1:
     <<: *gateway
