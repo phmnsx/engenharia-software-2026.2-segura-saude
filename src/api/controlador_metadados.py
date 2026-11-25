@@ -7,7 +7,7 @@ da LGPD (RN01) e dispara registro automático no Serviço de Log (LogSistema).
 
 import json
 import logging
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile, File, Query
 from typing import Optional
@@ -89,7 +89,7 @@ def listar_lotes(limit: int = Query(50, ge=1, le=500)):
 
 # ── GET /metadados/lotes/{lote_id} ──────────────────────────────────────
 @router.get("/lotes/{lote_id}", response_model=LoteMetadadosOut)
-def obter_lote(lote_id: str):
+def obter_lote(lote_id: UUID):
     """Retorna um lote com seus metadados."""
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("SELECT * FROM lotes_metadados WHERE id = %s;", (lote_id,))
