@@ -33,9 +33,13 @@ def ensure_services_running():
                 "metadados-db", "log-db", "log-service", "gateway-1",
             ],
             check=True,
+            capture_output=True,
+            text=True
     )
     except subprocess.CalledProcessError as e:
+        print("ERRO NO DOCKER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         print("STDERR:", e.stderr)
+        print("STDOUT:", e.stdout)
         raise
 
     # Aguarda o gateway responder

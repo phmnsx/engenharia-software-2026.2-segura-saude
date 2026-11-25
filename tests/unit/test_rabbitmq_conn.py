@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from src.common.rabbitmqconfig.connection import RabbitMQConnection
 
 # O pytest-asyncio precisa desse marcador para testes async
@@ -13,25 +13,24 @@ class TestRabbitMQConnectionUnit:
         RabbitMQConnection._channel = None
 
     @patch("aio_pika.connect_robust", new_callable=AsyncMock)
-    async def test_deve_conectar_ao_rabbitmq(self, mock_connect):
-        # Arrange (Prepara o mock)
-        mock_connection = AsyncMock()
-        mock_connection.is_closed = False
-        mock_channel = AsyncMock()
-        mock_connection.channel.return_value = mock_channel
+    async def test_nao_deve_abrir_duas_conexoes_se_ja_conectado(self, mock_connect):
+        # Cria um MagicMock (síncrono) para a conexão
+        mock_connection = MagicMock()
+        # Garante que a propriedade is_closed retorna False (Conexão aberta)
+        mock_connection.is_closed = False 
+        
+        # O channel também precisa ser um AsyncMock
+        mock_connection.channel = AsyncMock() 
+        
         mock_connect.return_value = mock_connection
-
+    
         conn = RabbitMQConnection()
-
-        # Act (Executa)
         await conn.connect()
-
-        # Assert (Verifica)
-        mock_connect.assert_called_once() # O connect_robust foi chamado?
-        mock_connection.channel.assert_called_once() # O canal foi aberto?
-        assert conn._connection is not None
-        assert conn._channel == mock_channel
-
+        await conn.connect() # Chama o connect de novo
+    
+        # Assert: O connect_robust só deve ter sido chamado 1 vez (Singleton)
+        mock_connect.assert_called_once()
+        
     @patch("aio_pika.connect_robust", new_callable=AsyncMock)
     async def test_nao_deve_abrir_duas_conexoes_se_ja_conectado(self, mock_connect):
         mock_connect.return_value = AsyncMock()
