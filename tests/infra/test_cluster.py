@@ -37,7 +37,7 @@ def teardown_module(module):
     )
 
 def test_load_balancing():
-     containers_atendidos = set()
+    containers_atendidos = set()
     print("[TEST] Aguardando API estabilizar...")
 
     # 1. LOOP DE ESPERA: Tenta conectar por até 30 segundos
@@ -60,6 +60,9 @@ def test_load_balancing():
         assert response.status_code == 200
         c_id = response.json().get("container_id")
         containers_atendidos.add(c_id)
+
+    assert len(containers_atendidos) >= 2, "O Nginx não balanceou a carga."
+    print(f"[OK] Tráfego distribuído entre {len(containers_atendidos)} containers.")
 
 def test_resilience():
     print("[TEST] Matando um container e vendo se o sistema ainda funciona")
