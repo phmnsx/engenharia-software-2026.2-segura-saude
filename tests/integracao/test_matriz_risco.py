@@ -21,6 +21,10 @@ LOG_API_URL = os.getenv("LOG_API_URL", "http://localhost:8005")
 
 @pytest.fixture(scope="module", autouse=True)
 def ensure_services_running():
+    subprocess.run(
+        ["docker", "compose", "down", "-v", "--remove-orphans"],
+        check=False,
+    )
     # Inicializa os serviços necessários para o teste
     try:
         subprocess.run(
