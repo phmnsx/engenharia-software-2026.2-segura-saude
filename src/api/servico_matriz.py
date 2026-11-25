@@ -12,12 +12,17 @@ from api.motor_risco import calcular_matriz_lote
 from common.log_client import send_system_log
 
 
+class LoteSemMetadadosError(Exception):
+    """O lote existe, mas não tem metadados para calcular a matriz."""
+
+
 def calcular_e_salvar(lote_id: str) -> Optional[dict]:
     """
     Executa o cálculo síncrono da Matriz de Risco para um lote de metadados (RF001, DT03)
     e persiste o resultado na base de dados, emitindo log de auditoria.
 
     Retorna o dicionário da matriz calculada ou None se o lote não existir.
+    Lança LoteSemMetadadosError se o lote não tiver metadados.
     """
     with get_connection() as conn, conn.cursor() as cur:
         # 1. Verifica se o lote de metadados existe
@@ -29,6 +34,8 @@ def calcular_e_salvar(lote_id: str) -> Optional[dict]:
         # 2. Busca todos os metadados associados ao lote
         cur.execute("SELECT * FROM metadados WHERE id_lote = %s;", (lote_id,))
         metadados_rows = cur.fetchall()
+        if not metadados_rows:
+            raise LoteSemMetadadosError(lote_id)
 
         # Desserializa atores_com_acesso se necessário
         metadados_processados = []

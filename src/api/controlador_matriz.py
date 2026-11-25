@@ -6,26 +6,32 @@ e integra com o Serviço de Log para auditoria de cada cálculo efetuado.
 """
 
 import json
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException
 
 from api.db import get_connection
 from api.schemas import MatrizDeRiscoOut
-from api.servico_matriz import calcular_e_salvar
+from api.servico_matriz import LoteSemMetadadosError, calcular_e_salvar
 
 router = APIRouter(prefix="/matriz", tags=["Matriz de Risco"])
 
 
 # ── POST /matriz/lotes/{lote_id}/calcular ──────────────────────────────
 @router.post("/lotes/{lote_id}/calcular", response_model=MatrizDeRiscoOut, status_code=200)
-def calcular_matriz_risco(lote_id: str):
+def calcular_matriz_risco(lote_id: UUID):
     """
     Executa o cálculo síncrono da Matriz de Risco para um lote de metadados (RF001, DT03).
     Cruza sensibilidade do dado, ausência de criptografia e superfície de acesso de atores,
     gerando o nível consolidado e a ação recomendada correspondente.
     """
-    matriz = calcular_e_salvar(lote_id)
+    try:
+        matriz = calcular_e_salvar(lote_id)
+    except LoteSemMetadadosError:
+        raise HTTPException(
+            status_code=422,
+            detail="Lote sem metadados: não há o que calcular.",
+        )
     if not matriz:
         raise HTTPException(status_code=404, detail="Lote não encontrado.")
     return matriz
@@ -33,7 +39,7 @@ def calcular_matriz_risco(lote_id: str):
 
 # ── GET /matriz/lotes/{lote_id} ─────────────────────────────────────────
 @router.get("/lotes/{lote_id}", response_model=MatrizDeRiscoOut)
-def obter_matriz_risco(lote_id: str):
+def obter_matriz_risco(lote_id: UUID):
     """
     Retorna a Matriz de Risco mais recente calculada para o lote informado.
     """
