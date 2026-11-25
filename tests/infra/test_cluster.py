@@ -11,7 +11,7 @@ URL_TEST = "http://localhost:8080"
 def setup_module(module):
     print("[SETUP] Inicializando 3 instancias para o cluster")
     subprocess.run(
-        f"docker compose -f {COMPOSE_FILE} down -v --remove-orphans",
+        f"docker compose -f {COMPOSE_FILE} down -v --remove-orphans --wait",
         shell=True, check=False
     )
     try:
