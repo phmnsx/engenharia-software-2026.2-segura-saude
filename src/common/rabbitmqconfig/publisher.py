@@ -1,5 +1,5 @@
 import aio_pika, json, logging, uuid
-from connection import RabbitMQConnection
+from src.common.rabbitmqconfig.connection import RabbitMQConnection
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
