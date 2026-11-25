@@ -16,6 +16,7 @@ class TestRabbitMQConnectionUnit:
     async def test_deve_conectar_ao_rabbitmq(self, mock_connect):
         # Arrange (Prepara o mock)
         mock_connection = AsyncMock()
+        mock_connection.is_closed = False
         mock_channel = AsyncMock()
         mock_connection.channel.return_value = mock_channel
         mock_connect.return_value = mock_connection

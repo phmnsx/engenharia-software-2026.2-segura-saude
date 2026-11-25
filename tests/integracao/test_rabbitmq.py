@@ -32,7 +32,7 @@ class TestRabbitMQIntegration:
             channel = await conn_manager.get_channel()
             
             # 2. Declara a fila de teste
-            queue = await channel.declare_queue(FILA_TESTE, durable=False)
+            queue = await channel.declare_queue(FILA_TESTE, durable=True)
             
             # 3. Esvazia a fila caso tenha lixo de testes anteriores
             await queue.purge()
