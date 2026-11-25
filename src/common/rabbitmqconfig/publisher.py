@@ -43,7 +43,7 @@ class RabbitMQPublisher:
             "acao": acao,
             "detalhes": detalhes or {}
         }
-        await self._publicar_com_confirmacao(fila, dados)
+        await self._ack_publish(fila, dados)
 
     async def publicar_tarefa_matriz(self, id_lote: str, id_matriz: str):
         """Método específico para solicitar o cálculo assíncrono da matriz (ASR06)."""
@@ -53,4 +53,4 @@ class RabbitMQPublisher:
             "id_matriz": id_matriz,
             "status": "PENDENTE"
         }
-        await self._publicar_com_confirmacao(fila, dados)
+        await self._ack_publish(fila, dados)
