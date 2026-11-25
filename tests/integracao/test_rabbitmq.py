@@ -39,7 +39,7 @@ class TestRabbitMQIntegration:
 
             # 4. Publica a mensagem
             payload = {"status": "teste_ok", "id": 123}
-            await publisher.publicar(FILA_TESTE, payload)
+            await publisher._ack_publish(FILA_TESTE, payload)
 
             # 5. Consome a mensagem (com timeout de 3s para não travar o teste)
             async with queue.iterator(timeout=3) as q:

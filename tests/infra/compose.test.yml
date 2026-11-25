@@ -53,17 +53,14 @@ services:
 
   gateway-1:
     <<: *gateway
-    container_name: gateway-1
     hostname: gateway-1
 
   gateway-2:
     <<: *gateway
-    container_name: gateway-2
     hostname: gateway-2
     
   gateway-3:
     <<: *gateway
-    container_name: gateway-3
     hostname: gateway-3
 
 networks:
