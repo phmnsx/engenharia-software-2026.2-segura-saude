@@ -49,7 +49,7 @@ class TestRabbitMQIntegration:
                         break # Sai do loop após pegar a primeira mensagem
 
             # 6. Verifica se a mensagem recebida é igual à enviada
-            assert dados_recebidos == payload
+            assert dados_recebidos["data"] == payload
             
         finally:
             # Limpeza: Apaga a fila e fecha a conexão
