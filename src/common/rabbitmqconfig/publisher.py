@@ -35,4 +35,22 @@ class RabbitMQPublisher:
             logger.error(f"[RabbitMQ] Falha ao publicar na fila '{fila}': {e}")
             raise
 
-    
+    async def publicar_log(self, usuario:str, acao:str, detalhes: dict = None):
+        """Método específico para o serviço de logs (ASR01)."""
+        fila = "logs_auditoria_queue"
+        dados = {
+            "usuario": usuario,
+            "acao": acao,
+            "detalhes": detalhes or {}
+        }
+        await self._publicar_com_confirmacao(fila, dados)
+
+    async def publicar_tarefa_matriz(self, id_lote: str, id_matriz: str):
+        """Método específico para solicitar o cálculo assíncrono da matriz (ASR06)."""
+        fila = "matriz_calculo_queue"
+        dados = {
+            "id_lote": id_lote,
+            "id_matriz": id_matriz,
+            "status": "PENDENTE"
+        }
+        await self._publicar_com_confirmacao(fila, dados)
