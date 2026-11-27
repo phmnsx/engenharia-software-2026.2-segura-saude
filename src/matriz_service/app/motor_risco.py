@@ -24,7 +24,7 @@ from functools import lru_cache
 import re
 from typing import Any, Dict, List, Tuple
 import unicodedata
-from api.models import NivelRisco
+from app.models import NivelRisco
 
 # Termos associados a dados sensíveis de saúde (LGPD Art. 5º, II e Art. 11)
 # Nota: "tratamento" foi removido por ser ambíguo (ex.: tratamento de dados, tratamento de resíduos).
