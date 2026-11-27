@@ -7,8 +7,8 @@ import json
 from uuid import uuid4
 from typing import Optional
 
-from api.db import get_connection
-from api.motor_risco import calcular_matriz_lote
+from app.db import get_connection
+from app.motor_risco import calcular_matriz_lote
 from common.log_client import send_system_log
 
 

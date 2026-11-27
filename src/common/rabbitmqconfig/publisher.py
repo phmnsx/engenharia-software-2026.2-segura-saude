@@ -1,8 +1,14 @@
-import aio_pika, json, logging, uuid
-from src.common.rabbitmqconfig.connection import RabbitMQConnection
+import json
+import logging
+import uuid
 from datetime import datetime
 
+import aio_pika
+
+from .connection import RabbitMQConnection
+
 logger = logging.getLogger(__name__)
+
 
 class RabbitMQPublisher:
     def __init__(self):
@@ -10,36 +16,36 @@ class RabbitMQPublisher:
 
     async def _ack_publish(self, fila: str, mensagem: dict):
         """
-        Método interno auxiliar para garantir o Publisher Confirms
+        Método interno auxiliar para garantir o Publisher Confirms.
         """
         try:
             channel = await self.conn_manager.get_channel()
             await channel.declare_queue(fila, durable=True)
 
             payload = {
-                "id_msg" : str(uuid.uuid4()),
-                "timestamp" : datetime.now().isoformat(),
-                "data" : mensagem
+                "id_msg": str(uuid.uuid4()),
+                "timestamp": datetime.now().isoformat(),
+                "data": mensagem,
             }
             await channel.default_exchange.publish(
                 aio_pika.Message(
                     body=json.dumps(payload).encode(),
-                    delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+                    delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
                 ),
-                routing_key=fila
+                routing_key=fila,
             )
             logger.info(f"[RabbitMQ] Mensagem publicada na fila '{fila}' com sucesso.")
         except Exception as e:
             logger.error(f"[RabbitMQ] Falha ao publicar na fila '{fila}': {e}")
             raise
 
-    async def publicar_log(self, usuario:str, acao:str, detalhes: dict = None):
+    async def publicar_log(self, usuario: str, acao: str, detalhes: dict = None):
         """Método específico para o serviço de logs (ASR01)."""
         fila = "logs_auditoria_queue"
         dados = {
             "usuario": usuario,
             "acao": acao,
-            "detalhes": detalhes or {}
+            "detalhes": detalhes or {},
         }
         await self._ack_publish(fila, dados)
 
@@ -49,6 +55,11 @@ class RabbitMQPublisher:
         dados = {
             "id_lote": id_lote,
             "id_matriz": id_matriz,
-            "status": "PENDENTE"
+            "status": "PENDENTE",
         }
         await self._ack_publish(fila, dados)
+
+    async def publicar_lote_metadados(self, lote_payload: dict):
+        """Publica um lote de metadados para persistência assíncrona no serviço de matriz/metadados."""
+        fila = "metadados_ingestao_queue"
+        await self._ack_publish(fila, lote_payload)
