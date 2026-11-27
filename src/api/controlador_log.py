@@ -17,7 +17,7 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlalchemy.orm import Session
 
-from api.db import get_db
+from common.outbox.db import get_db
 from api.schemas import AuditLogManualIn
 from common.rabbitmqconfig.publisher import RabbitMQPublisher
 

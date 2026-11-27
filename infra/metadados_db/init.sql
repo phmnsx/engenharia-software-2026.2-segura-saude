@@ -3,6 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS lotes_metadados (
     id UUID PRIMARY KEY,
+    event_id VARCHAR UNIQUE,
     nome_lote VARCHAR(200) NOT NULL,
     base_legal VARCHAR(200) NOT NULL,
     analista_responsavel VARCHAR(100),
@@ -11,6 +12,7 @@ CREATE TABLE IF NOT EXISTS lotes_metadados (
 
 CREATE TABLE IF NOT EXISTS metadados (
     id UUID PRIMARY KEY,
+    event_id VARCHAR UNIQUE,
     id_lote UUID NOT NULL REFERENCES lotes_metadados(id) ON DELETE CASCADE,
     origem VARCHAR(200) NOT NULL,
     temporalidade VARCHAR(100) NOT NULL,

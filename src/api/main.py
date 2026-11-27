@@ -8,7 +8,7 @@ from api.controlador_log import router as log_router
 from api.controlador_metadados import router as metadados_router
 from api.controlador_matriz import router as matriz_router
 from common.rabbitmqconfig.connection import RabbitMQConnection
-from api.workers.outbox_worker import processar_outbox
+from common.outbox.workers.outbox_worker import processar_outbox
 
 conn = RabbitMQConnection()
 

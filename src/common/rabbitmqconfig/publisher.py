@@ -5,7 +5,7 @@ from datetime import datetime
 
 import aio_pika
 
-from api.models.outbox import OutboxMessage
+from common.outbox.models.outbox import OutboxMessage
 
 from .connection import RabbitMQConnection
 

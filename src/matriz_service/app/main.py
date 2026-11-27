@@ -6,43 +6,62 @@ from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Query
 
+from common.outbox.db import SessionLocal
 from app.db import get_connection
 from app.servico_matriz import calcular_e_salvar
-from common.log_client import send_system_log
 from common.rabbitmqconfig.consumer import RabbitMQConsumer
+from common.rabbitmqconfig.publisher import RabbitMQPublisher
 
 logger = logging.getLogger(__name__)
 consumer = RabbitMQConsumer()
-
+publisher = RabbitMQPublisher()
 
 async def _processar_tarefa_matriz(payload: dict):
-    dados = payload["data"]
-    lote_id = dados["id_lote"]
+    id_msg = payload.get("id_msg")
+    dados = payload.get("data", {})
+    lote_id = dados.get("id_lote")
     matriz_id = dados.get("id_matriz")
-    resultado = calcular_e_salvar(lote_id, matriz_id=matriz_id)
-    if not resultado:
-        logger.warning("[MatrizService] Lote %s não encontrado ao processar cálculo.", lote_id)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("SELECT id FROM matrizes_risco WHERE event_id = %s;", (id_msg,))
+        if cur.fetchone():
+            logger.info(f"[Idempotência] Cálculo {id_msg} já realizado. Ignorando.")
+            return
+        try:
+            resultado = calcular_e_salvar(lote_id, matriz_id=matriz_id, event_id=id_msg, cursor=cur)
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise
 
 
 async def _processar_ingestao_metadados(payload: dict):
-    dados = payload["data"]
-    lote_id = dados["id"]
+    id_msg = payload.get("id_msg")
+    dados = payload.get("data", {})
+    lote_id = dados.get("id")
     metadados = dados.get("metadados", [])
+
+    if not id_msg:
+        logger.error("Mensagem sem id_msg recebida. Ignorando.")
+        return
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO lotes_metadados (id, nome_lote, base_legal, analista_responsavel)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (id) DO NOTHING;
+            INSERT INTO lotes_metadados (id, event_id, nome_lote, base_legal, analista_responsavel)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (event_id) DO NOTHING
+            RETURNING id;
             """,
-            (
-                lote_id,
-                dados["nome_lote"],
-                dados["base_legal"],
-                dados.get("analista_responsavel"),
-            ),
+            (lote_id, id_msg, dados["nome_lote"], dados["base_legal"], dados.get("analista_responsavel")),
         )
+        
+        lote_inserido = cur.fetchone()
+        
+
+        if not lote_inserido:
+            logger.info(f"[Idempotência] Mensagem {id_msg} já processada. Ignorando metadados.")
+            return 
 
         for m in metadados:
             cur.execute(
@@ -53,45 +72,22 @@ async def _processar_ingestao_metadados(payload: dict):
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb);
                 """,
                 (
-                    str(uuid4()),
-                    lote_id,
-                    m["origem"],
-                    m["temporalidade"],
-                    m.get("crm_responsavel"),
-                    m["tipo_dado"],
-                    m["categoria"],
-                    m["base_legal"],
-                    m["criptografado"],
+                    str(uuid4()), lote_id, m["origem"], m["temporalidade"], m.get("crm_responsavel"),
+                    m["tipo_dado"], m["categoria"], m["base_legal"], m["criptografado"],
                     json.dumps(m.get("atores_com_acesso", [])),
                 ),
             )
 
         conn.commit()
-
     total = len(metadados)
-    send_system_log(
-        service_name="matriz-service",
-        level="INFO",
-        message=f"Lote de metadados '{dados['nome_lote']}' criado com {total} registro(s).",
-        context={
-            "lote_id": lote_id,
-            "base_legal": dados["base_legal"],
-            "analista": dados.get("analista_responsavel"),
-            "total_metadados": total,
-        },
-    )
-
+    #gere log
+    with SessionLocal as db:
+        outbox_msg = await publisher.create_log_msg(m.get("crm_responsavel"),
+                                        "Ingestao de metadados")
+        db.add(outbox_msg)
+        db.commit()
     if total > 0:
-        try:
-            calcular_e_salvar(lote_id)
-        except Exception as exc:
-            logger.error("Falha ao calcular matriz para o lote %s: %s", lote_id, exc, exc_info=True)
-            send_system_log(
-                service_name="matriz-service",
-                level="ERROR",
-                message=f"Falha ao calcular matriz automaticamente para o lote '{dados['nome_lote']}': {exc}",
-                context={"lote_id": lote_id, "erro": str(exc)},
-            )
+        calcular_e_salvar(lote_id)
 
 
 @asynccontextmanager
@@ -104,7 +100,6 @@ async def lifespan(app: FastAPI):
         consumer.iniciar_consumo_metadados(_processar_ingestao_metadados)
     )
 
-    print("workers iniciados")
     yield
     
     task_matriz.cancel()

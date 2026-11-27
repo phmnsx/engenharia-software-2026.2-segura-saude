@@ -64,6 +64,7 @@ async def _processar_log_da_fila(payload: dict):
         logger.info(f"[Idempotência] Evento {event_id} já registrado. Ignorando duplicata.")
     else:
         logger.info(f"[Log] Evento {event_id} registrado com sucesso.")
+        print(f"[Log] Evento {event_id} registrado com sucesso.")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, JSON, DateTime, Enum
 from datetime import datetime
-from api.db import Base
+from common.outbox.db import Base
 import uuid
 
 class OutboxMessage(Base):

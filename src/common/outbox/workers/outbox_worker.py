@@ -1,6 +1,6 @@
 import asyncio
-from api.db import SessionLocal
-from api.models.outbox import OutboxMessage
+from common.outbox.db import SessionLocal
+from common.outbox.models.outbox import OutboxMessage
 from common.rabbitmqconfig.publisher import RabbitMQPublisher
 
 async def processar_outbox():
