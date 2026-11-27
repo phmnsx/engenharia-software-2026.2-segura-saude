@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -61,8 +62,15 @@ async def _processar_log_da_fila(payload: dict):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await consumer.iniciar_consumo_logs(_processar_log_da_fila)
+    task_consumer = asyncio.create_task(
+        consumer.iniciar_consumo_logs(_processar_log_da_fila)
+    )
     yield
+    task_consumer.cancel()
+    try:
+        await task_consumer
+    except asyncio.CancelledError:
+        pass 
     await consumer.conn_manager.close()
 
 

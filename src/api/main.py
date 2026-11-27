@@ -2,11 +2,13 @@ from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 import socket
 from api.auth_routes import router as auth_router
+import asyncio
 
 from api.controlador_log import router as log_router
 from api.controlador_metadados import router as metadados_router
 from api.controlador_matriz import router as matriz_router
 from common.rabbitmqconfig.connection import RabbitMQConnection
+from api.workers.outbox_worker import processar_outbox
 
 conn = RabbitMQConnection()
 
@@ -15,8 +17,10 @@ conn = RabbitMQConnection()
 async def lifespan(app: FastAPI):
     await conn.connect()
     app.state.rabbit_conn = conn
+    task_outbox = asyncio.create_task(processar_outbox())
     yield
 
+    task_outbox.cancel()
     await conn.close()
 
 app = FastAPI(title="SeguraSaúde - API Gateway", lifespan=lifespan)

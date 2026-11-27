@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -95,9 +96,26 @@ async def _processar_ingestao_metadados(payload: dict):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await consumer.iniciar_consumo_matriz(_processar_tarefa_matriz)
-    await consumer.iniciar_consumo_metadados(_processar_ingestao_metadados)
+    task_matriz = asyncio.create_task(
+        consumer.iniciar_consumo_matriz(_processar_tarefa_matriz)
+    )
+    
+    task_metadados = asyncio.create_task(
+        consumer.iniciar_consumo_metadados(_processar_ingestao_metadados)
+    )
+
+    print("workers iniciados")
     yield
+    
+    task_matriz.cancel()
+    task_metadados.cancel()
+    
+    try:
+        await task_matriz
+        await task_metadados
+    except asyncio.CancelledError:
+        pass
+        
     await consumer.conn_manager.close()
 
 

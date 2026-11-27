@@ -5,6 +5,8 @@ from datetime import datetime
 
 import aio_pika
 
+from api.models.outbox import OutboxMessage
+
 from .connection import RabbitMQConnection
 
 logger = logging.getLogger(__name__)
@@ -14,7 +16,7 @@ class RabbitMQPublisher:
     def __init__(self):
         self.conn_manager = RabbitMQConnection()
 
-    async def _ack_publish(self, fila: str, mensagem: dict):
+    async def ack_publish(self, fila: str, mensagem: dict):
         """
         Método interno auxiliar para garantir o Publisher Confirms.
         """
@@ -39,27 +41,29 @@ class RabbitMQPublisher:
             logger.error(f"[RabbitMQ] Falha ao publicar na fila '{fila}': {e}")
             raise
 
-    async def publicar_log(self, usuario: str, acao: str, detalhes: dict = None):
+    async def create_log_msg(self, usuario: str, acao: str, detalhes: dict = None):
         """Método específico para o serviço de logs (ASR01)."""
-        fila = "logs_auditoria_queue"
-        dados = {
-            "usuario": usuario,
-            "acao": acao,
-            "detalhes": detalhes or {},
-        }
-        await self._ack_publish(fila, dados)
-
+        return OutboxMessage(
+            queue_name="logs_auditoria_queue",
+            payload={
+                "usuario": usuario,
+                "acao": acao,
+                "detalhes": detalhes or {},
+            }
+        )
+    
     async def publicar_tarefa_matriz(self, id_lote: str, id_matriz: str):
         """Método específico para solicitar o cálculo assíncrono da matriz (ASR06)."""
-        fila = "matriz_calculo_queue"
-        dados = {
-            "id_lote": id_lote,
-            "id_matriz": id_matriz,
-            "status": "PENDENTE",
-        }
-        await self._ack_publish(fila, dados)
+        return OutboxMessage(
+            queue_name="matriz_calculo_queue",
+            payload={
+                "id_lote": id_lote,
+                "id_matriz": id_matriz,
+                "status": "PENDENTE",
+            }
+        )
 
     async def publicar_lote_metadados(self, lote_payload: dict):
         """Publica um lote de metadados para persistência assíncrona no serviço de matriz/metadados."""
         fila = "metadados_ingestao_queue"
-        await self._ack_publish(fila, lote_payload)
+        await self.ack_publish(fila, lote_payload)

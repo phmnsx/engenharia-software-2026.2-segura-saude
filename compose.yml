@@ -13,6 +13,10 @@ x-gateway: &gateway
     <<: *r-env
     LOG_SERVICE_URL: http://log-service:8000
     MATRIZ_SERVICE_URL: http://matriz-service:8000
+    DB_NAME: segurasaude_outbox
+    DB_USER: outbox_admin
+    DB_PASSWORD: outbox_pass
+    DB_URL: postgresql+psycopg://outbox_admin:outbox_pass@outbox-db:5432/segurasaude_outbox
   expose:
     - "8082"
   depends_on:
@@ -30,6 +34,7 @@ x-gateway: &gateway
     start_period: 5s
   networks:
     - mainServer
+    - outboxServer
 
 services:
   rabbitmq:
@@ -95,6 +100,24 @@ services:
   gateway-3:
     <<: *gateway
     hostname: gateway-3
+
+  outbox-db:
+    image: postgres:16-alpine
+    container_name: outbox-db
+    environment:
+      POSTGRES_DB: segurasaude_outbox
+      POSTGRES_USER: outbox_admin
+      POSTGRES_PASSWORD: outbox_pass
+    volumes:
+      - outbox_db_data:/var/lib/postgresql/data
+      - ./infra/outbox_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outbox_admin -d segurasaude_outbox"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - outboxServer
 
   metadados-db:
     image: postgres:16-alpine
@@ -189,9 +212,11 @@ services:
 
 networks:
   mainServer:
+  outboxServer:
   log_db_net:
     internal: true
 
 volumes:
   log_db_data:
   metadados_db_data:
+  outbox_db_data:

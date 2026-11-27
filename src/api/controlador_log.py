@@ -14,8 +14,10 @@ import urllib.error
 import urllib.request
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from sqlalchemy.orm import Session
 
+from api.db import get_db
 from api.schemas import AuditLogManualIn
 from common.rabbitmqconfig.publisher import RabbitMQPublisher
 
@@ -67,7 +69,7 @@ def listar_logs_sistema(limit: int = Query(50, ge=1, le=500)):
 
 # ── POST /logs/audit (registro manual via RabbitMQ) ────────────────────
 @router.post("/audit", status_code=201)
-async def registrar_audit_log(payload: AuditLogManualIn):
+async def registrar_audit_log(payload: AuditLogManualIn, db: Session = Depends(get_db)):
     """Registra um AuditLog manual publicando na fila do RabbitMQ (RF005)."""
     corpo = {
         "event_id": str(uuid4()),
@@ -78,15 +80,13 @@ async def registrar_audit_log(payload: AuditLogManualIn):
         "status": "SUCCESS",
         "details": {"motivo": payload.motivo, "origem": "registro_manual"},
     }
-    try:
-        await publisher.publicar_log(
-            usuario=payload.actor_id,
-            acao=payload.action,
-            detalhes=corpo,
-        )
-    except Exception:
-        raise HTTPException(
-            status_code=503,
-            detail="Mensageria indisponível. O registro não foi enfileirado; tente novamente.",
-        )
+
+    outbox_msg = await publisher.create_log_msg(
+        usuario=payload.actor_id,
+        acao=payload.action,
+        detalhes=corpo,
+    )
+    db.add(outbox_msg)
+    db.commit()
+
     return corpo
