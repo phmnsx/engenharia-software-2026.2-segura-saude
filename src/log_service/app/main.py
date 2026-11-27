@@ -41,24 +41,29 @@ def _inserir_audit_log(dados: dict) -> dict:
 
 async def _processar_log_da_fila(payload: dict):
     """Recebe o envelope do RabbitMQPublisher e grava o AuditLog no banco."""
+    event_id = payload.get("id_msg")
     data = payload.get("data", {})
-    detalhes = data.get("detalhes", {})
+    
+    if not event_id:
+        logger.error("Mensagem sem id_msg recebida. Ignorando.")
+        return
 
-    if isinstance(detalhes, dict) and "event_id" in detalhes:
-        _inserir_audit_log(detalhes)
+    row = _inserir_audit_log(
+        {
+            "event_id": event_id,
+            "actor_id": data.get("usuario", "sistema"),
+            "actor_role": "SISTEMA", 
+            "action": data.get("acao", "LOG"),
+            "resource": "rabbitmq",
+            "status": "SUCCESS",
+            "details": data.get("detalhes", {}),
+        }
+    )
+    
+    if row is None:
+        logger.info(f"[Idempotência] Evento {event_id} já registrado. Ignorando duplicata.")
     else:
-        _inserir_audit_log(
-            {
-                "event_id": payload.get("id_msg") or str(uuid4()),
-                "actor_id": data.get("usuario", "sistema"),
-                "actor_role": "SISTEMA",
-                "action": data.get("acao", "LOG"),
-                "resource": "rabbitmq",
-                "status": "SUCCESS",
-                "details": detalhes if isinstance(detalhes, dict) else {"raw": detalhes},
-            }
-        )
-
+        logger.info(f"[Log] Evento {event_id} registrado com sucesso.")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -101,7 +106,7 @@ def listar_logs_sistema(limit: int = Query(50, ge=1, le=500)):
         )
         return cur.fetchall()
 
-
+"""
 @app.post("/logs/audit", status_code=201)
 def criar_audit_log(payload: AuditLogIn):
     row = _inserir_audit_log(payload.model_dump())
@@ -114,12 +119,14 @@ def criar_audit_log(payload: AuditLogIn):
 def criar_system_log(payload: SystemLogIn):
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
-            """
-            INSERT INTO system_logs (service_name, level, message, context)
+            
+            INSERT INTO system_logs (event_id, service_name, level, message, context)
             VALUES (%s, %s, %s, %s::jsonb)
+            ON CONFLICT (event_id) DO NOTHING
             RETURNING *;
-            """,
+            ,
             (
+                payload.event_id,
                 payload.service_name,
                 payload.level,
                 payload.message,
@@ -128,4 +135,7 @@ def criar_system_log(payload: SystemLogIn):
         )
         row = cur.fetchone()
         conn.commit()
+        if not row:
+            raise HTTPException(status_code=409, detail="Evento de sistema já registrado.")
     return row
+"""
