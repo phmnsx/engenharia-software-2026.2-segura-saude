@@ -11,15 +11,12 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile, File, Query
 from typing import Optional
-
-from api.db import get_connection
 from api.schemas import (
     LoteMetadadosIn,
     LoteMetadadosOut,
     LoteMetadadosSummaryOut,
     MetadadosOut,
 )
-from api.servico_matriz import calcular_e_salvar
 from common.log_client import send_system_log
 
 logger = logging.getLogger(__name__)

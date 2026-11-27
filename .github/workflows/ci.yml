@@ -14,6 +14,17 @@ jobs:
   build-and-test:
     name: Build, Lint e Testes Automatizados
     runs-on: ubuntu-latest
+    
+    services:
+      rabbitmq:
+        image: rabbitmq:4-management
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       # 1. Checkout/Setup (Seção 9 P3)
@@ -38,6 +49,7 @@ jobs:
         run: |
            pip install -r src/api/requirements.txt
            pip install pytest requests flake8
+           pip install pytest-asyncio
       - name: Lint (Flake8)
         run: flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
 

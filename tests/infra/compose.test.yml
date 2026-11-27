@@ -7,7 +7,14 @@ x-gateway: &gateway
   networks:
     - test-net
   environment:
-    - ENV=test
+    ENV: test
+    RABBITMQ_HOST: rabbitmq
+    RABBITMQ_PORT: 5672
+    RABBITMQ_USER: guest
+    RABBITMQ_PASS: guest
+  depends_on:
+    rabbitmq:
+      condition: service_healthy
   healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/')"]
       interval: 5s
@@ -16,6 +23,22 @@ x-gateway: &gateway
       start_period: 5s
 
 services:
+  test-db:
+      image: postgres:16-alpine
+      environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: postgres
+        POSTGRES_DB: test_db
+      expose:
+        - "5432"
+      networks:
+        - test-net
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postgres"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+
   nginx-test:
     image: nginx:alpine
     ports:
@@ -32,19 +55,32 @@ services:
     networks:
       - test-net
 
+  rabbitmq:
+        image: rabbitmq:4-management
+        #ports:
+        #- "5672:5672"
+        #- "15672:15672"
+        environment:
+            RABBITMQ_DEFAULT_USER: guest
+            RABBITMQ_DEFAULT_PASS: guest
+        healthcheck:
+            test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+        networks:
+        - test-net
+
   gateway-1:
     <<: *gateway
-    container_name: gateway-1
     hostname: gateway-1
 
   gateway-2:
     <<: *gateway
-    container_name: gateway-2
     hostname: gateway-2
     
   gateway-3:
     <<: *gateway
-    container_name: gateway-3
     hostname: gateway-3
 
 networks:

@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS outbox_messages (
+    id VARCHAR PRIMARY KEY,
+    queue_name VARCHAR NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR DEFAULT 'PENDENTE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

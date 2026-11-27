@@ -1,164 +1,246 @@
+x-rabbit-env: &r-env # Variáveis relacionadas ao RabbitMQ
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: 5672
+  RABBITMQ_USER: guest
+  RABBITMQ_PASS: guest
 
+# Definição de um db-outbox
+x-db-outbox: &db-outbox
+  image: postgres:16-alpine
+  environment:
+    POSTGRES_DB: segurasaude_outbox
+    POSTGRES_USER: outbox_admin
+    POSTGRES_PASSWORD: outbox_pass
+  volumes:
+    - ./infra/outbox_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U outbox_admin -d segurasaude_outbox"]
+    interval: 5s
+    timeout: 5s
+    retries: 5
 
-
-
-x-rabbit-env: &r-env #Variaveis relacionadas a rabbitmq
-    RABBITMQ_HOST: placeholder
-
-#Definição de um gateway
-x-gateway : &gateway
-    build:
-        context: ./src
-        dockerfile: api/Dockerfile
-    environment:
-        <<: *r-env
-        DATABASE_URL: postgresql://app_user:app_user_dev_pass@metadados-db:5432/segurasaude
-        LOG_SERVICE_URL: http://log-service:8000
-    expose:
+# Definição de um gateway
+x-gateway: &gateway
+  build:
+    context: ./src
+    dockerfile: api/Dockerfile
+  environment:
+    <<: *r-env
+    LOG_SERVICE_URL: http://log-service:8000
+    MATRIZ_SERVICE_URL: http://matriz-service:8000
+    OUTBOX_DB_URL: postgresql+psycopg://outbox_admin:outbox_pass@api-outbox-db:5432/segurasaude_outbox
+    DB_NAME: segurasaude_outbox
+    DB_USER: outbox_admin
+    DB_PASSWORD: outbox_pass
+    
+  expose:
     - "8082"
-    depends_on:
-        metadados-db:
-            condition: service_healthy
-        log-service:
-            condition: service_healthy
+  depends_on:
+    log-service:
+      condition: service_healthy
+    matriz-service:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/')"]
+    interval: 5s
+    timeout: 5s
+    retries: 5
+    start_period: 5s
+  networks:
+    - mainServer
+    - apiOutboxServer
+
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    # ports:
+    #   - "5672:5672"
+    #   - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8082/')"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    expose:
+      - "5672"
+    networks:
+      - mainServer
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    depends_on:
+      frontend:
+        condition: service_healthy
+      gateway-1:
+        condition: service_healthy
+      gateway-2:
+        condition: service_healthy
+      gateway-3:
+        condition: service_healthy
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - mainServer
+
+  frontend:
+    build: ./src/frontend
+    container_name: frontend
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/index.html"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 3s
+    networks:
+      - mainServer
+
+  gateway-1:
+    <<: *gateway
+    hostname: gateway-1
+    ports:
+      - "127.0.0.1:8082:8082"
+
+  gateway-2:
+    <<: *gateway
+    hostname: gateway-2
+
+  gateway-3:
+    <<: *gateway
+    hostname: gateway-3
+
+  api-outbox-db:
+    <<: *db-outbox
+    container_name: api-outbox
+    environment:
+      DB_URL: postgresql+psycopg://outbox_admin:outbox_pass@api-outbox-db:5432/segurasaude_outbox
+    volumes:
+      - api_outbox_db_data:/var/lib/postgresql/data
+      - ./infra/outbox_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks: 
+    - apiOutboxServer
+
+  matriz-outbox-db:
+    <<: *db-outbox
+    container_name: matriz-outbox
+    environment:
+      DB_URL: postgresql+psycopg://outbox_admin:outbox_pass@matriz-outbox-db:5432/segurasaude_outbox
+    volumes:
+      - matriz_outbox_db_data:/var/lib/postgresql/data
+      - ./infra/outbox_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks: 
+    - matrizOutboxServer
+
+  metadados-db:
+    image: postgres:16-alpine
+    container_name: metadados-db
+    environment:
+      POSTGRES_DB: segurasaude
+      POSTGRES_USER: app_admin
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:-dev_admin_pass}
+    volumes:
+      - metadados_db_data:/var/lib/postgresql/data
+      - ./infra/metadados_db/init.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./infra/metadados_db/init_user.sql:/docker-entrypoint-initdb.d/02-user.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_admin -d segurasaude"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mainServer
+
+  matriz-service:
+    build:
+      context: ./src
+      dockerfile: matriz_service/Dockerfile
+    container_name: matriz-service
+    environment:
+      <<: *r-env
+      DATABASE_URL: postgresql://app_user:app_user_dev_pass@metadados-db:5432/segurasaude
+      OUTBOX_DB_URL: postgresql+psycopg://outbox_admin:outbox_pass@matriz-outbox-db:5432/segurasaude_outbox 
+      LOG_SERVICE_URL: http://log-service:8000
+    depends_on:
+      metadados-db:
+        condition: service_healthy
+      log-service:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 5s
     networks:
-        - mainServer
+      - mainServer
+      - matrizOutboxServer
 
-services:
-    rabbitmq:
-        image: rabbitmq:4-management
-        ports:
-        - "5672:5672"
-        - "15672:15672"
-        environment:
-            RABBITMQ_DEFAULT_USER: placeholder
-            RABBITMQ_DEFAULT_PASS: placeholder
-        healthcheck:
-            test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-            interval: 10s
-            timeout: 5s
-            retries: 10
-        networks:
-        - mainServer
+  log-db:
+    image: postgres:16-alpine
+    container_name: log-db
+    environment:
+      POSTGRES_DB: segurasaude_logs
+      POSTGRES_USER: log_admin
+      POSTGRES_PASSWORD: ${LOG_DB_ADMIN_PASSWORD:-dev_admin_pass}
+    volumes:
+      - log_db_data:/var/lib/postgresql/data
+      - ./infra/log_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U log_admin -d segurasaude_logs"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - log_db_net
 
-    nginx:
-        image: nginx:alpine
-        ports:
-        - "8080:80"
-        depends_on:
-            frontend:
-                condition: service_healthy
-            gateway-1:
-                condition: service_healthy 
-            gateway-2:
-                condition: service_healthy
-            gateway-3:
-                condition: service_healthy
-        volumes:
-        - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-        networks:
-        - mainServer
-    
-    frontend:
-        build: ./src/frontend
-        container_name: frontend
-        expose:
-        - "80"
-        healthcheck:
-            test: ["CMD", "wget", "-qO-", "http://127.0.0.1/index.html"]
-            interval: 5s
-            timeout: 5s
-            retries: 5
-            start_period: 3s
-        networks:
-        - mainServer
+  log-service:
+    build:
+      context: ./src
+      dockerfile: log_service/Dockerfile
+    container_name: log-service
+    environment:
+      <<: *r-env
+      LOG_DATABASE_URL: postgresql://log_writer:log_writer_dev_pass@log-db:5432/segurasaude_logs
+    depends_on:
+      log-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    expose:
+      - "8000"
+    ports:
+      - "127.0.0.1:8005:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - mainServer
+      - log_db_net
 
-    gateway-1:
-        <<: *gateway
-        container_name: gateway-1
-        hostname: gateway-1
-        ports:
-            - "127.0.0.1:8082:8082"
-
-    gateway-2:
-        <<: *gateway
-        container_name: gateway-2
-        hostname: gateway-2
-        
-    gateway-3:
-        <<: *gateway
-        container_name: gateway-3
-        hostname: gateway-3
-
-    metadados-db:
-        image: postgres:16-alpine
-        container_name: metadados-db
-        environment:
-            POSTGRES_DB: segurasaude
-            POSTGRES_USER: app_admin
-            POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:-dev_admin_pass}
-        volumes:
-            - metadados_db_data:/var/lib/postgresql/data
-            - ./infra/metadados_db/init.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-            - ./infra/metadados_db/init_user.sql:/docker-entrypoint-initdb.d/02-user.sql:ro
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U app_admin -d segurasaude"]
-            interval: 5s
-            timeout: 5s
-            retries: 5
-        networks:
-            - mainServer
-        
-    log-db:
-        image: postgres:16-alpine
-        container_name: log-db
-        environment:
-            POSTGRES_DB: segurasaude_logs
-            POSTGRES_USER: log_admin
-            POSTGRES_PASSWORD: ${LOG_DB_ADMIN_PASSWORD:-dev_admin_pass}
-        volumes:
-            - log_db_data:/var/lib/postgresql/data
-            - ./infra/log_db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U log_admin -d segurasaude_logs"]
-            interval: 5s
-            timeout: 5s
-            retries: 5
-        networks:
-            - log_db_net
-
-    log-service:
-        build: ./src/log_service
-        container_name: log-service
-        environment:
-            LOG_DATABASE_URL: postgresql://log_writer:log_writer_dev_pass@log-db:5432/segurasaude_logs
-        depends_on:
-            log-db:
-                condition: service_healthy
-        expose:
-            - "8000"
-        ports:
-            - "127.0.0.1:8005:8000"
-        healthcheck:
-            test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-            interval: 5s
-            timeout: 5s
-            retries: 5
-            start_period: 5s
-        networks:
-            - mainServer
-            - log_db_net
 networks:
   mainServer:
+  apiOutboxServer:
+  matrizOutboxServer:
   log_db_net:
     internal: true
 
 volumes:
   log_db_data:
   metadados_db_data:
+  api_outbox_db_data:
+  matriz_outbox_db_data:

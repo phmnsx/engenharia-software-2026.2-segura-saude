@@ -1,4 +1,4 @@
-pika
+aio-pika
 Pillow
 uvicorn
 fastapi
@@ -6,3 +6,4 @@ psycopg[binary]==3.2.3
 pydantic==2.9.2
 python-multipart
 PyJWT==2.9.0
+sqlalchemy

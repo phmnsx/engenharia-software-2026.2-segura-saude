@@ -9,6 +9,10 @@ LOG_API_URL = os.getenv("LOG_API_URL", "http://localhost:8005")
 @pytest.fixture(scope="module", autouse=True)
 def ensure_log_services_running():
     subprocess.run(
+        ["docker", "compose", "down", "-v", "--remove-orphans"],
+        check=False,
+    )
+    subprocess.run(
         ["docker", "compose", "up", "-d", "--wait", "log-db", "log-service"],
         check=True,
     )
